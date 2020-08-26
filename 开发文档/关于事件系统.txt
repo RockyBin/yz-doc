@@ -1,0 +1,69 @@
+一. 单个模块内的事件系统
+-----------------------
+正常情况下，laravel的事件是在 app\Providers\EventServiceProvider.php 注册的，
+但在模块化开发环境下，模块的事件应该在 Modules\<ModuleName>\Providers\EventServiceProvider.php 中注册
+步骤如下：
+1. 在 Modules\<ModuleName>\Providers\ 添加 EventServiceProvider.php , 在此文件的 $listen 中添加事件
+	protected $listen = [
+        'Modules\ModuleTest\Events\VisitEvent' => [
+            'Modules\ModuleTest\Listeners\VisitEventListener',
+        ],
+    ];
+    
+2. Modules\<ModuleName>\Providers\<ModuleName>ServiceProvider.php 中注册事件提供者
+	public function register()
+    {
+        ...
+        $this->app->register(EventServiceProvider::class); //添加事件提供者
+    }
+
+3. 在 Modules\<ModuleName>\Events 添加事件，如 VisitEvent.php
+4. 在 Modules\<ModuleName>\Listeners 添加事件监听器，如 VisitEventListener.php
+5. 在相应需要调用事件的地方加上 event(new VisitEvent());
+
+参考文档: http://www.php.cn/php-weizijiaocheng-383929.html
+
+二. 跨模块内的事件系统
+-----------------------
+laravel 的事件系统无法实现动态改变事件的回调事件处理器，比如系统底层实现了通用的会员注册过程，
+但在不同的应用模块中，会员注册成功后，需要有不同的处理，比如有些应用模块要发通知邮件，有些
+应用模块要发通知短信，如果会员注册系统是在模块内，使用模块内事件系统是可以，但是，实际开发过程
+中，会员注册是写在更通用的核心模块中，与应用模块并不在一个模块内，如果使用模块内事件这种方式，
+就需要在比如 ModuleCore/User::register() 内添加类似 event(new RegEvent()) 这类代码，此时有
+两个问题：
+(1). RegEvent 就固定的 RegEvent ,不能实现根据调用方执行不同的回调过程
+(2). 如果使用 if 等判断，按条件执行  ModuleA\RegEvent 或 ModuleB\RegEvent ，这时耦合度就比较高
+所以，我们需要实现事件回调是动态变化的，由外层应用系统来确定需要执行什么，而核心模块只需要保证有调用
+就可以了，实现方式如下：
+class Event{
+	public static function fireEvent($eventName,$callBack){
+        $args = array_slice(func_get_args(),2);
+	    if(is_string($callBack)){
+            if(preg_match('/^class:/i',$callBack)){
+                $class = substr($callBack,6);
+                call_user_func_array(array(new $class(), "handle"), $args);
+            }elseif(preg_match('/^https?:/i',$callBack)){
+                throw new \Exception('未实现');
+            }
+        }elseif($callBack instanceof \Closure){
+            call_user_func_array($callBack, $args);
+        }
+    }
+}
+
+class User{
+	public $onRegister = null;
+	public function register(){
+		...
+		if($this->onRegister) Event::fireEvent('onRegister',$this->onRegister);
+	}
+}
+而在外层应用中，可以用几种方式动态设置回调处理过程，如
+//方式一：回调函数
+$user->onRegister = function($name=''){
+    echo "fireEvent by Closure: ok<br>";
+};
+//方式二：指定回调类，回调类必须实现 handle() 方法
+$user->onRegister = 'class:\Modules\ModuleTest\RegEvent';
+//方式三：回调是调用某个网址
+$user->onRegister = 'https://www.72e.net/';

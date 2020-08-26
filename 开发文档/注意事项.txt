@@ -1,0 +1,29 @@
+1. 如果路由使用了闭包，将不能进行路由缓存，所以我们规则路由必须指向 Controller ,不能使用闭包
+2. 关于 phpredis，当使用 phpredis 时，如果启用长连接，并且如果有N个不同的 redis 连接配置，并且连接配置的 database 不一样时，会引起混乱，
+    这时要在 phpredis->pconnect() 时指定 persistent_id，但 laravel 的 PhpRedisConnector 的 establishConnection() 方法并没有这样处理，我们需要
+    修改 laravel 的源代码来保证连接不会混乱
+    protected function establishConnection($client, array $config)
+    {
+	$persistent_id = 'persistent_'.$config['database'];
+        $client->{($config['persistent'] ?? false) === true ? 'pconnect' : 'connect'}(
+            $config['host'], $config['port'], Arr::get($config, 'timeout', 0),$persistent_id //连接参数里增加了 $persistent_id，保证不会混乱
+        );
+    }
+3. 关于session，为实现共享session，我们将session保存到redis中
+	(1). 修改config/database.php,在 redis 节点中添加
+		//供session使用的
+	　　'session' => [
+		　　'host' => env('REDIS_HOST', 'localhost'),
+		　　'password' => env('REDIS_PASSWORD', null),
+		　　'port' => env('REDIS_PORT', 6379),
+		　　'database' => 1,
+	　　],
+	(2). 修改 config/session.php 文件中connection选项为session:如下
+		'connection' => 'session',
+	(3). 修改 .env 文件的 SESSION_DRIVER 选项为 redis:如下
+		SESSION_DRIVER=redis
+
+4. 关于 cookie
+    (1). 默认情况下，laravel 的 cookie 是加密是，如果某些 cookie 不想加密，可在 App\Http\Middleware\EncryptCookies 的 $except 数组中添加不想加密的 cookie 的 key
+    (2). 要设置 cookie ，要使用 Illuminate\Support\Facades\Cookie::queue() 这个方法，测试使用 make() 无法设置 cookie
+    (3). *** 如果程序用使用 exit die 等，cookie 会无法设置，因为 cookie 是在 laravel 的 response 过程中设置 http header 的，要使用 return 跳出相应的过程

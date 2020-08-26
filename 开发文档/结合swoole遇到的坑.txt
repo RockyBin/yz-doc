@@ -1,0 +1,32 @@
+1. 要注意使用超全局变量的地方
+2. 要注意模型的boot()方法因为只会调用一次，如果里面使用了一些根据网站ID来处理的变量，会有问题
+    解决方法是：(1). 在里面不使用这类型的变量，全部用 getCurrentSiteId() 来获取
+                           (2). 重写模型的 bootIfNotBooted() 方法，在 cli 或 swoole 模式下，if (isInCli() || isSwoole()) unset(static::$booted[static::class])
+3. 如果在 Controller 的构造函数里使用了中间件，可能会导致一些问题，可能和 StartSession 这个有关，有以下两种处理方式
+    (1). 采用双获取策略
+	// 在正常环境里，在 __construct 里是取不到session的，要在 middleware() 里取
+        // 但在 swoole 里，第一次执行 __construct() 是取不到，因为这时 StartSession 中间件还没启动，
+        // 第二次执行时，在 __construct() 里是可以取到的，因为 StartSession 已经启动过了，如果这时还进入
+        // middleware()，可能是 StartSession 又执行了，会导致 $this->memberId 丢失
+        $this->memberId = Auth::hasLogin();
+        if (!$this->memberId) {
+            $this->middleware(function ($request, Closure $next) {
+                $this->memberId = Auth::hasLogin();
+                if (!$this->IsLogin()) {
+                    return $this->actionWhenNoLogin();
+                }
+                return $next($request);
+            });
+        }
+  (2). 不用中间件，而用重写 Controller::callAction() 方法来处理
+	public function beforeAction($action = ''){
+		\YZ\Core\SysManage\PermCheck::check();
+	}
+
+	public function callAction($method, $parameters){
+		if(method_exists($this,'beforeAction')) call_user_func_array([$this, 'beforeAction'], ['action' => $method]);
+		$return = parent::callAction($method, $parameters);
+		if(method_exists($this,'afterAction')) call_user_func_array([$this, 'afterAction'], ['action' => $method]);
+		return $return;
+	}
+    

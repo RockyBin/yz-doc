@@ -1,0 +1,22 @@
+很多第三方组件可以在这里找到 https://laravel-china.org/topics/2530/the-highest-amount-of-downloads-of-the-100-laravel-extensions-recommended
+我们需要用到的组件
+1. 模型验证                             laravelbook/ardent
+	有关更多验证器的规则参考 https://blog.csdn.net/cfun_goodmorning/article/details/78870631
+2. 跨域资源共享的支持                    barryvdh/laravel-cors
+3. 客户端 User Agent 解析工具           jenssegers/agent
+4. Excel 处理工具                       Laravel-Excel
+5. 图片处理扩展包，支持裁剪、水印等处理   intervention/image
+6. UUID生成                             webpatser/laravel-uuid
+7. Twig 模板引擎支持                    rcrowe/twigbridge
+8. 日期处理工具                         jenssegers/date
+9. HTML 生成                           PDF/Image barryvdh/laravel-snappy
+10. 通过 IP 获取到对应的地理位置信息     torann/geoip
+11. ZIp 打包工具（基于 ZipArchive）     chumper/zipper
+12. 二维码生成工具                      simplesoftwareio/simple-qrcode
+13. 数据备份工具                        spatie/laravel-backup
+14. 专为 ORM 定制的文件上传支持		    codesleeve/laravel-stapler
+15. 图片验证码方案					   mewebstudio/captcha
+16. 一个简单的购物车模块实现			   gloudemans/shoppingcart
+17. Soap 协议客户端					   artisaninweb/laravel-soap 我们应该暂时不会用到
+18. 对不同输出格式进行转换，支持Array，CSV，JSON，XML，YAML 		soapbox/laravel-formatter
+19. 将 CSS 样式写入 HTML 里，用于邮件发送内容的样式定制			fedeisas/laravel-mail-css-inliner

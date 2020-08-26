@@ -1,0 +1,11 @@
+有些第三方库不是很符合我们的使用要求，要作少量的修改，记录如下
+
+1. overtrue/laravel-wechat 修改的请求接口时的 https 本地证书验证
+	修改类 Overtrue\Socialite\Providers\AbstractProvider 中的 $guzzleOptions，增加一个配置项目 'verify' => false
+2. vendor\overtrue\wechat\src\Kernel\Traits\HasHttpRequests.php 
+	在 $defaults 数组中的 curl 节点下增加 CURLOPT_SSL_VERIFYPEER => false 和 CURLOPT_SSL_VERIFYHOST => false
+
+3. 支付宝SDK
+	(1). 支付宝SDK与Laravel都自定义了encrypt与decrypt函数，所以会产生冲突，只要将支付宝SDK中的 \aop\AopClient.php \aop\AopEncrypt.php
+		下的这两个函数全部重新命名即可，注意所有的  包括引用函数   直接在编辑器中查找替换也可以
+	(2). php 7.2 以上废弃了 each() 函数，AopClient.php 中的 buildRequestForm() 使用了 each(),要改为 foreach
